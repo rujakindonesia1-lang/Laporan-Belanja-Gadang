@@ -22,7 +22,7 @@
     <div class="container mt-4 mb-5">
         <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
             <h2 class="mb-0 text-dark fw-bold">Dasbor Belanja Gadang</h2>
-            <span class="badge bg-primary px-3 py-2">Batam Site</span>
+            <span class="badge bg-primary px-3 py-2">RN Site</span>
         </div>
         
         <div class="row mb-4">
@@ -100,14 +100,17 @@
                                     <label class="form-label fw-bold text-primary mb-1">Total Harga (Rp)</label>
                                     <input type="number" class="form-control border-primary text-primary fw-bold" id="totalHarga">
                                 </div>
-                                <div class="row">
-                                    <div class="col-6 mb-3">
-                                        <label class="form-label">Timbangan (No/Status)</label>
-                                        <input type="text" class="form-control" id="timbangan">
+                                
+                                <div class="row mt-4">
+                                    <div class="col-12 mb-3">
+                                        <label class="form-label fw-bold">📸 Upload Foto Timbangan</label>
+                                        <input type="file" class="form-control" id="timbanganFoto" accept="image/*">
+                                        <small class="text-muted">Pilih dari Galeri / Kamera</small>
                                     </div>
-                                    <div class="col-6 mb-3">
-                                        <label class="form-label">Nota (No/Status)</label>
-                                        <input type="text" class="form-control" id="nota">
+                                    <div class="col-12 mb-3">
+                                        <label class="form-label fw-bold">📸 Upload Foto Nota</label>
+                                        <input type="file" class="form-control" id="notaFoto" accept="image/*">
+                                        <small class="text-muted">Pilih dari Galeri / Kamera</small>
                                     </div>
                                 </div>
                             </div>
@@ -277,14 +280,40 @@
             });
         }
 
-        document.getElementById('formBelanja').addEventListener('submit', function(e) {
+        // Fungsi mengubah File Gambar menjadi Kode Teks (Base64)
+        function getBase64(file) {
+            return new Promise((resolve, reject) => {
+                if (!file) { resolve(""); return; }
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        document.getElementById('formBelanja').addEventListener('submit', async function(e) {
             e.preventDefault();
             const btn = document.getElementById('btnSubmit');
-            btn.innerText = 'Menyimpan...';
+            
+            // Proses Upload butuh waktu lebih lama, berikan info ke pengguna
+            btn.innerText = 'MENGUNGGAH FOTO & DATA... MOHON TUNGGU';
             btn.disabled = true;
 
+            const kategori = document.getElementById('kategori').value;
+            let timbanganBase64 = "";
+            let notaBase64 = "";
+
+            if (kategori === 'Pengeluaran') {
+                const fileTimbangan = document.getElementById('timbanganFoto').files[0];
+                const fileNota = document.getElementById('notaFoto').files[0];
+                
+                // Ubah gambar jadi base64 secara berurutan
+                timbanganBase64 = await getBase64(fileTimbangan);
+                notaBase64 = await getBase64(fileNota);
+            }
+
             const postData = {
-                kategori: document.getElementById('kategori').value,
+                kategori: kategori,
                 kas_awal: document.getElementById('kasAwal').value || "",
                 jenis_barang: document.getElementById('jenisBarang').value || "",
                 berat: document.getElementById('berat').value || "",
@@ -292,8 +321,8 @@
                 total_harga: document.getElementById('totalHarga').value || "",
                 metode_pembayaran: document.getElementById('metode').value,
                 status: document.getElementById('status').value,
-                timbangan: document.getElementById('timbangan').value || "",
-                nota: document.getElementById('nota').value || ""
+                timbangan_base64: timbanganBase64,
+                nota_base64: notaBase64
             };
 
             fetch(SCRIPT_URL, {
@@ -301,14 +330,14 @@
                 body: JSON.stringify(postData)
             }).then(response => response.json())
               .then(result => {
-                  alert('Data berhasil masuk ke Sheet!');
+                  alert('Data dan Bukti Foto berhasil disimpan!');
                   document.getElementById('formBelanja').reset();
                   toggleFields();
                   btn.innerText = 'SIMPAN KE GOOGLE SHEETS';
                   btn.disabled = false;
                   loadDashboard(); 
               }).catch(error => {
-                  alert('Terjadi kesalahan koneksi.');
+                  alert('Terjadi kesalahan saat mengunggah. Pastikan koneksi internet stabil.');
                   btn.innerText = 'SIMPAN KE GOOGLE SHEETS';
                   btn.disabled = false;
               });
