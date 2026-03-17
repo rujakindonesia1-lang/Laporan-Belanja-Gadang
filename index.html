@@ -73,6 +73,16 @@
                                 <select class="form-select border-dark shadow-sm" id="kategori" onchange="toggleFields()" required>
                                     <option value="Pengeluaran">🔴 Pengeluaran (Belanja)</option>
                                     <option value="Pemasukan">🟢 Pemasukan (Isi Kas Awal)</option>
+                                    <div class="row mb-4 pb-3 border-bottom">
+                                <div class="col-6">
+                                    <label class="form-label text-dark">Tanggal Transaksi</label>
+                                    <input type="date" class="form-control shadow-sm" id="tanggalInput" required>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label text-dark">Hari</label>
+                                    <input type="text" class="form-control bg-light text-secondary fw-bold" id="hariInput" readonly>
+                                </div>
+                            </div>
                                 </select>
                             </div>
 
@@ -151,7 +161,7 @@
 
     <script>
         // MASUKKAN URL DEPLOYMENT BARU DI SINI
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyA4GtVqKaZjCWo9aLAiWxQAla4oUM5sB-bJcQTppUxfI77MaSWUnNrvU3HJo720liWRg/exec'; 
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxAZH1i_RBG4C04K5AvU_sJTY_aAsDy1l2-ziJrvTKgas1IVDwGQsnH6hSqs37b-Qgggw/exec'; 
         
         let expenseChartInstance = null;
         const isMobile = window.innerWidth < 768;
