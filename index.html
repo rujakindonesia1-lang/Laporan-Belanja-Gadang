@@ -30,7 +30,7 @@
                 <div class="card text-white bg-success h-100">
                     <div class="card-body p-3 d-flex flex-column justify-content-center">
                         <h6 class="card-title small-text mb-1">Saldo Awal</h6>
-                        <h4 id="saldoText" class="stat-value mb-0">Loading...</h4>
+                        <h4 id="saldoText" class="stat-value mb-0">Rp 0</h4>
                     </div>
                 </div>
             </div>
@@ -82,7 +82,7 @@
                                 </div>
                                 <div class="col-6">
                                     <label class="form-label text-dark">Hari</label>
-                                    <input type="text" class="form-control" id="hariInput" readonly>
+                                    <input type="text" class="form-control bg-light" id="hariInput" readonly>
                                 </div>
                             </div>
 
@@ -99,7 +99,7 @@
                                 <div class="row">
                                     <div class="col-6 mb-3">
                                         <label class="form-label">Berat</label>
-                                        <input type="text" class="form-control" id="berat">
+                                        <input type="number" step="0.01" class="form-control" id="berat" oninput="hitungTotal()">
                                     </div>
                                     <div class="col-6 mb-3">
                                         <label class="form-label">Harga Satuan (Rp)</label>
@@ -108,19 +108,17 @@
                                 </div>
                                 <div class="mb-3 p-2 bg-light border rounded">
                                     <label class="form-label fw-bold text-primary mb-1">Total Harga (Rp)</label>
-                                    <input type="number" class="form-control border-primary text-primary fw-bold" id="totalHarga">
+                                    <input type="number" class="form-control border-primary text-primary fw-bold" id="totalHarga" readonly>
                                 </div>
                                 
                                 <div class="row mt-4">
                                     <div class="col-12 mb-3">
                                         <label class="form-label fw-bold">📸 Upload Foto Timbangan</label>
                                         <input type="file" class="form-control" id="timbanganFoto" accept="image/*">
-                                        <small class="text-muted">Pilih dari Galeri / Kamera</small>
                                     </div>
                                     <div class="col-12 mb-3">
                                         <label class="form-label fw-bold">📸 Upload Foto Nota</label>
                                         <input type="file" class="form-control" id="notaFoto" accept="image/*">
-                                        <small class="text-muted">Pilih dari Galeri / Kamera</small>
                                     </div>
                                 </div>
                             </div>
@@ -151,7 +149,7 @@
             <div class="col-lg-7 mb-4">
                 <div class="card h-100">
                     <div class="card-header bg-dark text-white">📈 Grafik Tren Pengeluaran Harian</div>
-                    <div class="card-body bg-white">
+                    <div class="card-body bg-white" style="min-height: 300px;">
                         <canvas id="expenseChart"></canvas>
                     </div>
                 </div>
@@ -160,110 +158,83 @@
     </div>
 
     <script>
-        // MASUKKAN URL DEPLOYMENT BARU DI SINI
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxAZH1i_RBG4C04K5AvU_sJTY_aAsDy1l2-ziJrvTKgas1IVDwGQsnH6hSqs37b-Qgggw/exec'; 
         
         let expenseChartInstance = null;
-        const isMobile = window.innerWidth < 768;
+
+        // Fungsi Format Rupiah
         const formatRp = (angka) => {
-            if (isMobile && Math.abs(angka) >= 1000000) {
-                return 'Rp ' + (angka / 1000000).toFixed(1).replace('.', ',') + ' Jt';
-            }
-            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
+            return new Intl.NumberFormat('id-ID', { 
+                style: 'currency', 
+                currency: 'IDR', 
+                minimumFractionDigits: 0 
+            }).format(angka);
         };
+
+        // --- PERBAIKAN: Fungsi Update Hari ---
+        function updateHari() {
+            const tanggalValue = document.getElementById('tanggalInput').value;
+            if (tanggalValue) {
+                const date = new Date(tanggalValue);
+                const hari = new Intl.DateTimeFormat('id-ID', { weekday: 'long' }).format(date);
+                document.getElementById('hariInput').value = hari;
+            }
+        }
+
+        document.getElementById('tanggalInput').addEventListener('change', updateHari);
 
         function toggleFields() {
             const kategori = document.getElementById('kategori').value;
+            const areaPemasukan = document.getElementById('areaPemasukan');
+            const areaPengeluaran = document.getElementById('areaPengeluaran');
+            
             if (kategori === 'Pemasukan') {
-                document.getElementById('areaPemasukan').style.display = 'block';
-                document.getElementById('areaPengeluaran').style.display = 'none';
+                areaPemasukan.classList.remove('hidden-field');
+                areaPengeluaran.classList.add('hidden-field');
             } else {
-                document.getElementById('areaPemasukan').style.display = 'none';
-                document.getElementById('areaPengeluaran').style.display = 'block';
+                areaPemasukan.classList.add('hidden-field');
+                areaPengeluaran.classList.remove('hidden-field');
             }
         }
         
         function hitungTotal() {
             let berat = parseFloat(document.getElementById('berat').value) || 0;
             let hargaSatuan = parseFloat(document.getElementById('hargaSatuan').value) || 0;
-            if(berat > 0 && hargaSatuan > 0) {
-                document.getElementById('totalHarga').value = berat * hargaSatuan;
-            }
+            document.getElementById('totalHarga').value = Math.round(berat * hargaSatuan);
         }
 
         function loadDashboard() {
             fetch(SCRIPT_URL)
                 .then(response => response.json())
                 .then(data => {
-                    let totalPemasukan = 0;
-                    let totalPengeluaran = 0;
-                    let totalHutang = 0;
-                    let firstDate = new Date();
-                    let chartLabels = [];
-                    let chartData = [];
+                    let totalPemasukan = 0, totalPengeluaran = 0, totalHutang = 0;
                     let expensesByDate = {};
-                    let hasValidData = false;
+                    let firstDate = new Date();
 
                     data.forEach(row => {
                         let kasAwal = parseFloat(row['Kas Awal']) || 0;
                         let totalHarga = parseFloat(row['Total Harga']) || 0;
                         let dateObj = new Date(row['Tanggal']);
-                        
-                        if (kasAwal > 0 || totalHarga > 0) {
-                            hasValidData = true;
-                            if (dateObj < firstDate) firstDate = dateObj;
-                        }
 
                         if (row['Kategori'] === 'Pemasukan') {
                             totalPemasukan += kasAwal;
-                        } else if (row['Kategori'] === 'Pengeluaran') {
+                        } else {
                             totalPengeluaran += totalHarga;
-                            if (row['Status'] === 'Hutang') {
-                                totalHutang += totalHarga;
-                            }
+                            if (row['Status'] === 'Hutang') totalHutang += totalHarga;
                             
                             let dateStr = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
                             expensesByDate[dateStr] = (expensesByDate[dateStr] || 0) + totalHarga;
                         }
                     });
 
-                    let sisaSaldo = totalPemasukan - totalPengeluaran;
                     document.getElementById('saldoText').innerText = formatRp(totalPemasukan);
                     document.getElementById('pengeluaranText').innerText = formatRp(totalPengeluaran);
-                    document.getElementById('sisaSaldoText').innerText = formatRp(sisaSaldo);
-                    
-                    if(totalHutang > 0) {
-                        document.getElementById('hutangText').innerText = 'Htg: ' + formatRp(totalHutang);
-                    } else {
-                        document.getElementById('hutangText').innerText = '';
-                    }
+                    document.getElementById('sisaSaldoText').innerText = formatRp(totalPemasukan - totalPengeluaran);
+                    document.getElementById('hutangText').innerText = totalHutang > 0 ? 'Hutang: ' + formatRp(totalHutang) : '';
 
-                    if(hasValidData) {
-                        let today = new Date();
-                        let diffTime = Math.abs(today - firstDate);
-                        let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                        if(diffDays === 0) diffDays = 1; 
-
-                        let avgDailyExpense = totalPengeluaran / diffDays;
-                        let runwayDays = avgDailyExpense > 0 ? Math.floor(sisaSaldo / avgDailyExpense) : 0;
-                        if (sisaSaldo <= 0) runwayDays = 0;
-
-                        let runwayWeeks = Math.floor(runwayDays / 7);
-                        let runwayMonths = Math.floor(runwayDays / 30);
-
-                        document.getElementById('runwayText').innerText = runwayDays + ' Hari';
-                        document.getElementById('runwayDetail').innerText = `${runwayWeeks} Mgg | ${runwayMonths} Bln`;
-                    } else {
-                        document.getElementById('runwayText').innerText = '- Hari';
-                    }
-
-                    for (let date in expensesByDate) {
-                        chartLabels.push(date);
-                        chartData.push(expensesByDate[date]);
-                    }
-                    renderChart(chartLabels, chartData);
+                    renderChart(Object.keys(expensesByDate), Object.values(expensesByDate));
                 })
-                .catch(error => console.error('Error:', error));
+                .catch(error => console.error('Error loading dashboard:', error));
         }
 
         function renderChart(labels, data) {
@@ -274,86 +245,69 @@
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: 'Pengeluaran Harian',
+                        label: 'Pengeluaran (Rp)',
                         data: data,
-                        backgroundColor: 'rgba(13, 110, 253, 0.7)',
-                        borderColor: 'rgba(13, 110, 253, 1)',
-                        borderWidth: 1,
-                        borderRadius: 4
+                        backgroundColor: '#0d6efd',
+                        borderRadius: 5
                     }]
                 },
-                options: { 
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: { y: { beginAtZero: true } }
-                }
+                options: { responsive: true, maintainAspectRatio: false }
             });
         }
 
-        // Fungsi mengubah File Gambar menjadi Kode Teks (Base64)
-        function getBase64(file) {
-            return new Promise((resolve, reject) => {
-                if (!file) { resolve(""); return; }
+        async function getBase64(file) {
+            return new Promise((resolve) => {
+                if (!file) return resolve("");
                 const reader = new FileReader();
                 reader.readAsDataURL(file);
                 reader.onload = () => resolve(reader.result);
-                reader.onerror = error => reject(error);
             });
         }
 
         document.getElementById('formBelanja').addEventListener('submit', async function(e) {
             e.preventDefault();
             const btn = document.getElementById('btnSubmit');
-            
-            // Proses Upload butuh waktu lebih lama, berikan info ke pengguna
-            btn.innerText = 'MENGUNGGAH FOTO & DATA... SABAR YGY';
+            btn.innerText = 'MEMPROSES...';
             btn.disabled = true;
 
-            const kategori = document.getElementById('kategori').value;
-            let timbanganBase64 = "";
-            let notaBase64 = "";
-
-            if (kategori === 'Pengeluaran') {
-                const fileTimbangan = document.getElementById('timbanganFoto').files[0];
-                const fileNota = document.getElementById('notaFoto').files[0];
-                
-                // Ubah gambar jadi base64 secara berurutan
-                timbanganBase64 = await getBase64(fileTimbangan);
-                notaBase64 = await getBase64(fileNota);
-            }
-
             const postData = {
-                kategori: kategori,
-                kas_awal: document.getElementById('kasAwal').value || "",
-                jenis_barang: document.getElementById('jenisBarang').value || "",
-                berat: document.getElementById('berat').value || "",
-                harga_satuan: document.getElementById('hargaSatuan').value || "",
-                total_harga: document.getElementById('totalHarga').value || "",
+                tanggal: document.getElementById('tanggalInput').value,
+                hari: document.getElementById('hariInput').value,
+                kategori: document.getElementById('kategori').value,
+                kas_awal: document.getElementById('kasAwal').value,
+                jenis_barang: document.getElementById('jenisBarang').value,
+                berat: document.getElementById('berat').value,
+                harga_satuan: document.getElementById('hargaSatuan').value,
+                total_harga: document.getElementById('totalHarga').value,
                 metode_pembayaran: document.getElementById('metode').value,
                 status: document.getElementById('status').value,
-                timbangan_base64: timbanganBase64,
-                nota_base64: notaBase64
+                timbangan_base64: await getBase64(document.getElementById('timbanganFoto').files[0]),
+                nota_base64: await getBase64(document.getElementById('notaFoto').files[0])
             };
 
             fetch(SCRIPT_URL, {
                 method: 'POST',
                 body: JSON.stringify(postData)
-            }).then(response => response.json())
-              .then(result => {
-                  alert('Data dan Bukti Foto berhasil disimpan!');
-                  document.getElementById('formBelanja').reset();
-                  toggleFields();
-                  btn.innerText = 'SIMPAN KE GOOGLE SHEETS';
-                  btn.disabled = false;
-                  loadDashboard(); 
-              }).catch(error => {
-                  alert('Terjadi kesalahan saat mengunggah. Pastikan koneksi internet stabil.');
-                  btn.innerText = 'SIMPAN KE GOOGLE SHEETS';
-                  btn.disabled = false;
-              });
+            })
+            .then(res => res.json())
+            .then(result => {
+                alert('Data Berhasil Disimpan!');
+                this.reset();
+                window.onload(); // Reset tanggal dan hari ke hari ini
+                loadDashboard();
+            })
+            .catch(err => alert('Gagal mengirim data.'))
+            .finally(() => {
+                btn.innerText = 'SIMPAN KE GOOGLE SHEETS';
+                btn.disabled = false;
+            });
         });
 
         window.onload = function() {
+            // Set default tanggal ke hari ini
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('tanggalInput').value = today;
+            updateHari();
             toggleFields();
             loadDashboard();
         };
