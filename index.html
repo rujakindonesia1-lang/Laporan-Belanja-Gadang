@@ -73,7 +73,9 @@
                                 <select class="form-select border-dark shadow-sm" id="kategori" onchange="toggleFields()" required>
                                     <option value="Pengeluaran">🔴 Pengeluaran (Belanja)</option>
                                     <option value="Pemasukan">🟢 Pemasukan (Isi Kas Awal)</option>
-                                    <div class="row mb-4 pb-3 border-bottom">
+                                </select>
+                            </div> 
+                            <div class="row mb-4 pb-3 border-bottom">
                                 <div class="col-6">
                                     <label class="form-label text-dark">Tanggal Transaksi</label>
                                     <input type="date" class="form-control shadow-sm" id="tanggalInput" required>
@@ -82,8 +84,6 @@
                                     <label class="form-label text-dark">Hari</label>
                                     <input type="text" class="form-control bg-light text-secondary fw-bold" id="hariInput" readonly>
                                 </div>
-                            </div>
-                                </select>
                             </div>
 
                             <div id="areaPemasukan" class="hidden-field mb-3 p-3 border border-success rounded bg-light">
@@ -306,7 +306,7 @@
             const btn = document.getElementById('btnSubmit');
             
             // Proses Upload butuh waktu lebih lama, berikan info ke pengguna
-            btn.innerText = 'MENGUNGGAH FOTO & DATA... SABAR YA GES YA';
+            btn.innerText = 'MENGUNGGAH FOTO & DATA... SABAR YGY';
             btn.disabled = true;
 
             const kategori = document.getElementById('kategori').value;
